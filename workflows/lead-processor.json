@@ -1,1 +1,182 @@
-111
+{
+  "name": "Lead Processor Pro (Telegram → AI → CRM)",
+  "nodes": [
+    {
+      "id": "Webhook_Lead",
+      "name": "Telegram / Form Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "options": {
+          "responseCode": 200,
+          "responseMode": "onReceived",
+          "responseData": "firstEntryJson",
+          "responseBody": "OK"
+        }
+      }
+    },
+    {
+      "id": "If_Hot_Lead",
+      "name": "Hot lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [520, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message?.text || $json.text || '' }}",
+              "operation": "contains",
+              "value2": "купить"
+            },
+            {
+              "value1": "={{ $json.message?.text || $json.text || '' }}",
+              "operation": "contains",
+              "value2": "стоимость"
+            }
+          ]
+        },
+        "combineOperation": "any"
+      }
+    },
+    {
+      "id": "Code_Normalize",
+      "name": "Normalize Lead Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 200],
+      "parameters": {
+        "language": "javascript",
+        "jsCode": "const msg = $json.message || $json;\n\nreturn {\n  json: {\n    name: msg.from?.first_name || msg.name || '',\n    username: msg.from?.username || '',\n    contact: msg.from?.phone_number || msg.phone || '',\n    text: msg.text || msg.message?.text || '',\n    source: 'telegram',\n    createdAt: new Date().toISOString()\n  }\n};"
+      }
+    },
+    {
+      "id": "AI_Classify",
+      "name": "Classify Lead (LLM)",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [1040, 200],
+      "parameters": {
+        "resource": "chat",
+        "operation": "createChatCompletion",
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 256
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "Ты помощник отдела продаж. По тексту сообщения лида верни JSON с полями: intent (\"интерес\", \"вопрос\", \"холодный\"), budget (\"низкий\", \"средний\", \"высокий\"), urgency (\"срочно\", \"можно подождать\"). Отвечай только JSON."
+          },
+          {
+            "role": "user",
+            "content": "Текст лида: {{$json[\"text\"]}}"
+          }
+        ]
+      }
+    },
+    {
+      "id": "Code_Merge",
+      "name": "Merge Lead + AI Tags",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 200],
+      "parameters": {
+        "language": "javascript",
+        "jsCode": "const lead = $items(\"Normalize Lead Data\")[0].json;\nlet tags = {};\n\ntry {\n  tags = JSON.parse($json.choices[0].message.content);\n} catch (e) {}\n\nreturn {\n  json: {\n    ...lead,\n    intent: tags.intent || '',\n    budget: tags.budget || '',\n    urgency: tags.urgency || ''\n  }\n};"
+      }
+    },
+    {
+      "id": "Save_Sheet",
+      "name": "Save to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 3,
+      "position": [1560, 200],
+      "parameters": {
+        "operation": "append",
+        "documentId": "",
+        "sheetId": "",
+        "options": {
+          "locationDefine": "range",
+          "range": "Leads!A:F"
+        },
+        "valueInputMode": "RAW",
+        "columns": [
+          "createdAt",
+          "name",
+          "username",
+          "contact",
+          "intent",
+          "budget",
+          "urgency",
+          "text",
+          "source"
+        ],
+        "values": "={{ [$json.createdAt, $json.name, $json.username, $json.contact, $json.intent, $json.budget, $json.urgency, $json.text, $json.source] }}"
+      },
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "Telegram / Form Webhook": {
+      "main": [
+        [
+          {
+            "node": "Hot lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot lead?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Normalize Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Classify Lead (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Lead (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Merge Lead + AI Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Lead + AI Tags": {
+      "main": [
+        [
+          {
+            "node": "Save to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
