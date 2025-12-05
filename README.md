@@ -1,10 +1,10 @@
-# 🚀 n8n AI Agents Starter Kit — 10+ workflow от Stepik Awards 2024
+# 🚀 n8n AI Agents Starter Kit — стартовый набор workflow от Stepik Awards 2024
 
 [![Stars](https://img.shields.io/github/stars/grebblydragon/n8n-ai-agents-starter-kit?style=social)](https://github.com/grebblydragon/n8n-ai-agents-starter-kit)
 [![Forks](https://img.shields.io/github/forks/grebblydragon/n8n-ai-agents-starter-kit)](https://github.com/grebblydragon/n8n-ai-agents-starter-kit)
 [![Stepik Course](https://img.shields.io/badge/Stepik-AI%20агенты%20n8n-brightgreen)](https://stepik.org/a/222232?utm_source=github)
 
-**10+ готовых n8n workflow** от **лауреатов Stepik Awards 2024 "Прорыв Года"**. Импортируй за 30 секунд → автоматизируй бизнес!
+**Пакет готовых n8n workflow (стартовый набор из 4 сценариев)**. Импортируй за 30 секунд → автоматизируй бизнес!
 
 ## 🔥 ТОП-4 WORKFLOW
 
